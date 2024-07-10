@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Layer Normalization Visualization</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .slider-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .slider-container label {
+            margin-right: 10px;
+        }
+        .slider-container input {
+            margin-right: 10px;
+        }
+        .button-container {
+            margin-bottom: 20px;
+        }
+        .formula-container {
+            margin-bottom: 20px;
+        }
+        .formula {
+            font-size: 16px;
+            font-family: 'Courier New', Courier, monospace;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h2>Layer Normalization vs Adaptive Layer Normalization</h2>
+    <p>Adjust the sliders to see the effect of gamma and beta on the adaptive layer normalization.</p>
+    <div class="formula-container">
+        <div class="formula">
+            <strong>Layer Normalization:</strong> 
+            <span id="layerNormFormula">\( y = \frac{x - \mu}{\sqrt{\sigma^2 + \epsilon}} \)</span>
+        </div>
+        <div class="formula">
+            <strong>Adaptive Layer Normalization:</strong> 
+            <span id="adaptiveLayerNormFormula">\( y = \gamma \left( \frac{x - \mu}{\sqrt{\sigma^2 + \epsilon}} \right) + \beta \)</span>
+        </div>
+    </div>
+    <div class="slider-container">
+        <label for="gamma">Gamma: </label>
+        <input type="range" id="gamma" value="1" min="0" max="2" step="0.01" oninput="updateChart()">
+        <span id="gammaValue">1.00</span>
+        <button onclick="toggleAutoPlay('gamma')">Auto Play Gamma</button>
+    </div>
+    <div class="slider-container">
+        <label for="beta">Beta: </label>
+        <input type="range" id="beta" value="0" min="-1" max="1" step="0.01" oninput="updateChart()">
+        <span id="betaValue">0.00</span>
+        <button onclick="toggleAutoPlay('beta')">Auto Play Beta</button>
+    </div>
+    <div class="button-container">
+        <button onclick="generateNewData()">Generate New Data</button>
+    </div>
+    <canvas id="myChart" width="400" height="200"></canvas>
+
+    <script>
+        // 生成随机数据
+        function generateRandomData(n) {
+            let data = [];
+            for (let i = 0; i < n; i++) {
+                data.push(Math.random() * 10); // 生成 0 到 10 之间的随机数
+            }
+            return data;
+        }
+
+        // Layer Normalization
+        function layerNorm(data) {
+            let mean = data.reduce((a, b) => a + b) / data.length;
+            let variance = data.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / data.length;
+            let stdDev = Math.sqrt(variance);
+            return data.map(x => (x - mean) / stdDev);
+        }
+
+        // Adaptive Layer Normalization
+        function adaptiveLayerNorm(data, gamma, beta) {
+            let normalizedData = layerNorm(data);
+            return normalizedData.map(x => x * gamma + beta);
+        }
+
+        // 初始化数据
+        let data = generateRandomData(20);
+        let autoPlayIntervalGamma = null;
+        let autoPlayIntervalBeta = null;
+        let autoPlayDirectionGamma = 1;
+        let autoPlayDirectionBeta = 1;
+
+        // 初始化图表
+        const ctx = document.getElementById('myChart').getContext('2d');
+        let myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: Array.from({length: 20}, (_, i) => i + 1),
+                datasets: [
+                    {
+                        label: 'Original Data',
+                        data: data,
+                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Layer Norm Data',
+                        data: layerNorm(data),
+                        backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Adaptive Layer Norm Data',
+                        data: adaptiveLayerNorm(data, 1, 0),
+                        backgroundColor: 'rgba(255, 159, 64, 0.6)',
+                        borderColor: 'rgba(255, 159, 64, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        },
+                        // 设置 barPercentage 和 categoryPercentage 调整间隔
+                        barPercentage: 0.5,
+                        categoryPercentage: 0.5
+                    },
+                    y: {
+                        beginAtZero: true,
+                        min: -5,
+                        max: 10
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Comparison of Layer Normalization and Adaptive Layer Normalization'
+                    }
+                }
+            }
+        });
+
+        // 更新图表函数
+        function updateChart() {
+            let gamma = parseFloat(document.getElementById('gamma').value);
+            let beta = parseFloat(document.getElementById('beta').value);
+            document.getElementById('gammaValue').innerText = gamma.toFixed(2);
+            document.getElementById('betaValue').innerText = beta.toFixed(2);
+            let adaptiveLayerNormData = adaptiveLayerNorm(data, gamma, beta);
+
+            myChart.data.datasets[2].data = adaptiveLayerNormData;
+            myChart.update();
+        }
+
+        // 生成新数据并更新图表
+        function generateNewData() {
+            data = generateRandomData(20);
+            myChart.data.datasets[0].data = data;
+            myChart.data.datasets[1].data = layerNorm(data);
+            updateChart();
+        }
+
+        // 自动播放函数
+        function toggleAutoPlay(parameter) {
+            let interval;
+            if (parameter === 'gamma') {
+                interval = autoPlayIntervalGamma;
+                if (interval) {
+                    clearInterval(autoPlayIntervalGamma);
+                    autoPlayIntervalGamma = null;
+                } else {
+                    autoPlayIntervalGamma = setInterval(() => autoPlay('gamma'), 50);
+                }
+            } else if (parameter === 'beta') {
+                interval = autoPlayIntervalBeta;
+                if (interval) {
+                    clearInterval(autoPlayIntervalBeta);
+                    autoPlayIntervalBeta = null;
+                } else {
+                    autoPlayIntervalBeta = setInterval(() => autoPlay('beta'), 50);
+                }
+            }
+        }
+
+        function autoPlay(parameter) {
+            let element, value, min, max, direction;
+            if (parameter === 'gamma') {
+                element = document.getElementById('gamma');
+                value = parseFloat(element.value);
+                min = parseFloat(element.min);
+                max = parseFloat(element.max);
+                direction = autoPlayDirectionGamma;
+            } else if (parameter === 'beta') {
+                element = document.getElementById('beta');
+                value = parseFloat(element.value);
+                min = parseFloat(element.min);
+                max = parseFloat(element.max);
+                direction = autoPlayDirectionBeta;
+            }
+
+            value += direction * 0.01;
+            if (value >= max || value <= min) {
+                direction *= -1;
+            }
+            value = Math.max(min, Math.min(max, value));
+
+            if (parameter === 'gamma') {
+                autoPlayDirectionGamma = direction;
+                element.value = value;
+                document.getElementById('gammaValue').innerText = value.toFixed(2);
+            } else if (parameter === 'beta') {
+                autoPlayDirectionBeta = direction;
+                element.value = value;
+                document.getElementById('betaValue').innerText = value.toFixed(2);
+            }
+            updateChart();
+        }
+    </script>
+</body>
+</html>
