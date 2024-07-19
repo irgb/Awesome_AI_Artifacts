@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Colorful Mandelbrot Set Explorer with Infinite Zoom</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/decimal.js/10.3.1/decimal.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            color: #333;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            cursor: move;
+        }
+        .controls {
+            margin-top: 10px;
+        }
+        button, select {
+            margin: 0 5px;
+            padding: 5px 10px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Mandelbrot Set: z<sub>n+1</sub> = z<sub>n</sub><sup>2</sup> + c</h1>
+    <canvas id="mandelbrotCanvas" width="600" height="400"></canvas>
+    <div class="controls">
+        <button id="zoomIn">Zoom In</button>
+        <button id="zoomOut">Zoom Out</button>
+        <button id="reset">Reset</button>
+        <select id="precisionMode">
+            <option value="normal">Normal Precision</option>
+            <option value="high">High Precision</option>
+        </select>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('mandelbrotCanvas');
+        const ctx = canvas.getContext('2d');
+        let width = canvas.width;
+        let height = canvas.height;
+
+        let xMin = -2;
+        let xMax = 1;
+        let yMin = -1;
+        let yMax = 1;
+
+        let xMinDecimal = new Decimal(-2);
+        let xMaxDecimal = new Decimal(1);
+        let yMinDecimal = new Decimal(-1);
+        let yMaxDecimal = new Decimal(1);
+
+        const maxIterations = 1000;
+
+        let isDragging = false;
+        let lastX, lastY;
+
+        let highPrecisionMode = false;
+
+        function mandelbrot(x0, y0) {
+            let x = 0;
+            let y = 0;
+            let iteration = 0;
+            let xSquared = 0;
+            let ySquared = 0;
+
+            while (xSquared + ySquared <= 4 && iteration < maxIterations) {
+                y = 2 * x * y + y0;
+                x = xSquared - ySquared + x0;
+                xSquared = x * x;
+                ySquared = y * y;
+                iteration++;
+            }
+
+            if (iteration < maxIterations) {
+                const log_zn = Math.log(xSquared + ySquared) / 2;
+                const nu = Math.log(log_zn / Math.log(2)) / Math.log(2);
+                iteration = iteration + 1 - nu;
+            }
+
+            return iteration;
+        }
+
+        function mandelbrotDecimal(x0, y0) {
+            let x = new Decimal(0);
+            let y = new Decimal(0);
+            let iteration = 0;
+            let xSquared = new Decimal(0);
+            let ySquared = new Decimal(0);
+
+            while (xSquared.plus(ySquared).lte(4) && iteration < maxIterations) {
+                y = x.times(y).times(2).plus(y0);
+                x = xSquared.minus(ySquared).plus(x0);
+                xSquared = x.times(x);
+                ySquared = y.times(y);
+                iteration++;
+            }
+
+            if (iteration < maxIterations) {
+                const log_zn = xSquared.plus(ySquared).ln().div(2);
+                const nu = log_zn.div(Decimal.ln(2)).ln().div(Decimal.ln(2));
+                iteration = iteration + 1 - nu.toNumber();
+            }
+
+            return iteration;
+        }
+
+        function hslToRgb(h, s, l) {
+            let r, g, b;
+
+            if (s === 0) {
+                r = g = b = l;
+            } else {
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1;
+                    if (t > 1) t -= 1;
+                    if (t < 1/6) return p + (q - p) * 6 * t;
+                    if (t < 1/2) return q;
+                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                    return p;
+                };
+
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                r = hue2rgb(p, q, h + 1/3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1/3);
+            }
+
+            return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+        }
+
+        function drawMandelbrot() {
+            const imageData = ctx.createImageData(width, height);
+
+            for (let px = 0; px < width; px++) {
+                for (let py = 0; py < height; py++) {
+                    let iteration;
+                    if (highPrecisionMode) {
+                        const x = xMinDecimal.plus(xMaxDecimal.minus(xMinDecimal).times(px).dividedBy(width));
+                        const y = yMinDecimal.plus(yMaxDecimal.minus(yMinDecimal).times(py).dividedBy(height));
+                        iteration = mandelbrotDecimal(x, y);
+                    } else {
+                        const x = xMin + (xMax - xMin) * px / width;
+                        const y = yMin + (yMax - yMin) * py / height;
+                        iteration = mandelbrot(x, y);
+                    }
+
+                    let [r, g, b] = [0, 0, 0];
+                    if (iteration < maxIterations) {
+                        const hue = (iteration / 50) % 1;
+                        [r, g, b] = hslToRgb(hue, 1, 0.5);
+                    }
+
+                    const index = (py * width + px) * 4;
+                    imageData.data[index] = r;
+                    imageData.data[index + 1] = g;
+                    imageData.data[index + 2] = b;
+                    imageData.data[index + 3] = 255;
+                }
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        function zoom(factor, centerX, centerY) {
+            if (highPrecisionMode) {
+                const xCenter = xMinDecimal.plus(xMaxDecimal.minus(xMinDecimal).times(centerX).dividedBy(width));
+                const yCenter = yMinDecimal.plus(yMaxDecimal.minus(yMinDecimal).times(centerY).dividedBy(height));
+                const newWidth = xMaxDecimal.minus(xMinDecimal).times(factor);
+                const newHeight = yMaxDecimal.minus(yMinDecimal).times(factor);
+
+                xMinDecimal = xCenter.minus(newWidth.dividedBy(2));
+                xMaxDecimal = xCenter.plus(newWidth.dividedBy(2));
+                yMinDecimal = yCenter.minus(newHeight.dividedBy(2));
+                yMaxDecimal = yCenter.plus(newHeight.dividedBy(2));
+            } else {
+                const xCenter = xMin + (xMax - xMin) * centerX / width;
+                const yCenter = yMin + (yMax - yMin) * centerY / height;
+                const newWidth = (xMax - xMin) * factor;
+                const newHeight = (yMax - yMin) * factor;
+
+                xMin = xCenter - newWidth / 2;
+                xMax = xCenter + newWidth / 2;
+                yMin = yCenter - newHeight / 2;
+                yMax = yCenter + newHeight / 2;
+            }
+
+            drawMandelbrot();
+        }
+
+        function pan(dx, dy) {
+            if (highPrecisionMode) {
+                const rangeX = xMaxDecimal.minus(xMinDecimal);
+                const rangeY = yMaxDecimal.minus(yMinDecimal);
+
+                const moveX = rangeX.times(dx).dividedBy(width);
+                const moveY = rangeY.times(dy).dividedBy(height);
+
+                xMinDecimal = xMinDecimal.plus(moveX);
+                xMaxDecimal = xMaxDecimal.plus(moveX);
+                yMinDecimal = yMinDecimal.plus(moveY);
+                yMaxDecimal = yMaxDecimal.plus(moveY);
+            } else {
+                const rangeX = xMax - xMin;
+                const rangeY = yMax - yMin;
+
+                const moveX = dx * rangeX / width;
+                const moveY = dy * rangeY / height;
+
+                xMin += moveX;
+                xMax += moveX;
+                yMin += moveY;
+                yMax += moveY;
+            }
+
+            drawMandelbrot();
+        }
+
+        document.getElementById('zoomIn').addEventListener('click', () => zoom(0.5, width / 2, height / 2));
+        document.getElementById('zoomOut').addEventListener('click', () => zoom(2, width / 2, height / 2));
+        document.getElementById('reset').addEventListener('click', () => {
+            xMin = -2;
+            xMax = 1;
+            yMin = -1;
+            yMax = 1;
+            xMinDecimal = new Decimal(-2);
+            xMaxDecimal = new Decimal(1);
+            yMinDecimal = new Decimal(-1);
+            yMaxDecimal = new Decimal(1);
+            drawMandelbrot();
+        });
+
+        document.getElementById('precisionMode').addEventListener('change', (e) => {
+            highPrecisionMode = e.target.value === 'high';
+            drawMandelbrot();
+        });
+
+        canvas.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            lastX = e.offsetX;
+            lastY = e.offsetY;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const dx = e.offsetX - lastX;
+                const dy = e.offsetY - lastY;
+                pan(-dx, -dy);
+                lastX = e.offsetX;
+                lastY = e.offsetY;
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            isDragging = false;
+        });
+
+        drawMandelbrot();
+    </script>
+</body>
+</html>
