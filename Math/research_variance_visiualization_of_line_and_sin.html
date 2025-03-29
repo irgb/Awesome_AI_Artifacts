@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sine Function and Line Variance Visualization</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+        }
+        .control-group {
+            flex: 1;
+            min-width: 250px;
+        }
+        .control-group h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #444;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="range"] {
+            width: 100%;
+        }
+        .value-display {
+            display: inline-block;
+            margin-left: 10px;
+            font-weight: normal;
+            color: #666;
+        }
+        .charts {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .chart-container {
+            flex: 1;
+            min-width: 300px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            background-color: white;
+            height: 200px; /* Set an appropriate chart container height */
+        }
+        canvas {
+            width: 100%;
+            border: 1px solid #eee;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f0f8ff;
+            border-radius: 8px;
+            border-left: 4px solid #4682b4;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sine Function and Line Variance Visualization Tool</h1>
+        
+        <div class="controls">
+            <div class="control-group">
+                <h3>Sine Function Parameters</h3>
+                <div>
+                    <label for="amplitude">Amplitude (A): <span id="amplitudeValue" class="value-display">1</span></label>
+                    <input type="range" id="amplitude" min="0.1" max="5" step="0.1" value="1">
+                </div>
+                <div>
+                    <label for="wavelength">Wavelength (λ): <span id="wavelengthValue" class="value-display">1</span></label>
+                    <input type="range" id="wavelength" min="0.1" max="5" step="0.1" value="1">
+                </div>
+                <div>
+                    <label for="sinePoints">Sample Points: <span id="sinePointsValue" class="value-display">100</span></label>
+                    <input type="range" id="sinePoints" min="10" max="500" step="10" value="100">
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <h3>Line Parameters</h3>
+                <div>
+                    <label for="slope">Slope (k): <span id="slopeValue" class="value-display">1</span></label>
+                    <input type="range" id="slope" min="-5" max="5" step="0.1" value="1">
+                </div>
+                <div>
+                    <label for="intercept">Intercept (b): <span id="interceptValue" class="value-display">0</span></label>
+                    <input type="range" id="intercept" min="-5" max="5" step="0.1" value="0">
+                </div>
+                <div>
+                    <label for="linePoints">Sample Points: <span id="linePointsValue" class="value-display">100</span></label>
+                    <input type="range" id="linePoints" min="10" max="500" step="10" value="100">
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <h3>Interval Settings</h3>
+                <div>
+                    <label for="xMin">X Minimum: <span id="xMinValue" class="value-display">0</span></label>
+                    <input type="range" id="xMin" min="-10" max="0" step="0.5" value="0">
+                </div>
+                <div>
+                    <label for="xMax">X Maximum: <span id="xMaxValue" class="value-display">10</span></label>
+                    <input type="range" id="xMax" min="1" max="20" step="0.5" value="10">
+                </div>
+            </div>
+        </div>
+        
+        <div class="charts">
+            <div class="chart-container">
+                <h3>Function Graph</h3>
+                <canvas id="functionChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3>Variance Comparison</h3>
+                <canvas id="varianceChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="results">
+            <h3>Calculation Results</h3>
+            <div id="variance-results"></div>
+            <table id="varianceTable">
+                <thead>
+                    <tr>
+                        <th>Function</th>
+                        <th>Variance</th>
+                        <th>Standard Deviation</th>
+                        <th>Mean</th>
+                        <th>Maximum</th>
+                        <th>Minimum</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr id="sineResult">
+                        <td>Sine Function</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                    </tr>
+                    <tr id="lineResult">
+                        <td>Line</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="results">
+            <h3>Research Conclusions</h3>
+            <div id="conclusions">
+                <p><strong>Sine Function Variance Properties:</strong></p>
+                <ul id="sineConclusions">
+                    <li>The variance of a sine function is proportional to the square of the amplitude (Var ∝ A²)</li>
+                    <li>Wavelength affects variance, especially when the measurement interval doesn't contain an integer number of wavelengths</li>
+                    <li>Over a complete cycle, the variance of a sine function is A²/2</li>
+                </ul>
+                
+                <p><strong>Line Variance Properties:</strong></p>
+                <ul id="lineConclusions">
+                    <li>For uniformly distributed points, the variance of a line is related to the interval width and slope</li>
+                    <li>Changes in the intercept do not affect variance, only the mean</li>
+                    <li>For a line y=kx+b on the interval [a,b], the variance is approximately k²(b-a)²/12</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Get UI elements
+        const amplitudeSlider = document.getElementById('amplitude');
+        const amplitudeValue = document.getElementById('amplitudeValue');
+        const wavelengthSlider = document.getElementById('wavelength');
+        const wavelengthValue = document.getElementById('wavelengthValue');
+        const sinePointsSlider = document.getElementById('sinePoints');
+        const sinePointsValue = document.getElementById('sinePointsValue');
+        
+        const slopeSlider = document.getElementById('slope');
+        const slopeValue = document.getElementById('slopeValue');
+        const interceptSlider = document.getElementById('intercept');
+        const interceptValue = document.getElementById('interceptValue');
+        const linePointsSlider = document.getElementById('linePoints');
+        const linePointsValue = document.getElementById('linePointsValue');
+        
+        const xMinSlider = document.getElementById('xMin');
+        const xMinValue = document.getElementById('xMinValue');
+        const xMaxSlider = document.getElementById('xMax');
+        const xMaxValue = document.getElementById('xMaxValue');
+        
+        const functionCanvas = document.getElementById('functionChart');
+        const varianceCanvas = document.getElementById('varianceChart');
+        
+        const sineResultRow = document.getElementById('sineResult');
+        const lineResultRow = document.getElementById('lineResult');
+        
+        // Initialize charts
+        let functionChart, varianceChart;
+        let varianceHistory = {
+            sine: [],
+            line: []
+        };
+        
+        // Initialize value displays
+        updateValueDisplay(amplitudeSlider, amplitudeValue);
+        updateValueDisplay(wavelengthSlider, wavelengthValue);
+        updateValueDisplay(sinePointsSlider, sinePointsValue);
+        updateValueDisplay(slopeSlider, slopeValue);
+        updateValueDisplay(interceptSlider, interceptValue);
+        updateValueDisplay(linePointsSlider, linePointsValue);
+        updateValueDisplay(xMinSlider, xMinValue);
+        updateValueDisplay(xMaxSlider, xMaxValue);
+        
+        // Add event listeners
+        amplitudeSlider.addEventListener('input', updateAndCalculate);
+        wavelengthSlider.addEventListener('input', updateAndCalculate);
+        sinePointsSlider.addEventListener('input', updateAndCalculate);
+        slopeSlider.addEventListener('input', updateAndCalculate);
+        interceptSlider.addEventListener('input', updateAndCalculate);
+        linePointsSlider.addEventListener('input', updateAndCalculate);
+        xMinSlider.addEventListener('input', updateAndCalculate);
+        xMaxSlider.addEventListener('input', updateAndCalculate);
+        
+        // Update value display
+        function updateValueDisplay(slider, valueElement) {
+            valueElement.textContent = slider.value;
+        }
+        
+        // Update and calculate
+        function updateAndCalculate() {
+            updateValueDisplay(amplitudeSlider, amplitudeValue);
+            updateValueDisplay(wavelengthSlider, wavelengthValue);
+            updateValueDisplay(sinePointsSlider, sinePointsValue);
+            updateValueDisplay(slopeSlider, slopeValue);
+            updateValueDisplay(interceptSlider, interceptValue);
+            updateValueDisplay(linePointsSlider, linePointsValue);
+            updateValueDisplay(xMinSlider, xMinValue);
+            updateValueDisplay(xMaxSlider, xMaxValue);
+            
+            calculateAndDraw();
+        }
+        
+        // Calculate mean
+        function calculateMean(data) {
+            return data.reduce((sum, value) => sum + value, 0) / data.length;
+        }
+        
+        // Calculate variance
+        function calculateVariance(data) {
+            const mean = calculateMean(data);
+            return data.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) / data.length;
+        }
+        
+        // Calculate standard deviation
+        function calculateStandardDeviation(data) {
+            return Math.sqrt(calculateVariance(data));
+        }
+        
+        // Calculate maximum
+        function calculateMax(data) {
+            return Math.max(...data);
+        }
+        
+        // Calculate minimum
+        function calculateMin(data) {
+            return Math.min(...data);
+        }
+        
+        // Calculate function values and draw charts
+        function calculateAndDraw() {
+            const amplitude = parseFloat(amplitudeSlider.value);
+            const wavelength = parseFloat(wavelengthSlider.value);
+            const sinePoints = parseInt(sinePointsSlider.value);
+            
+            const slope = parseFloat(slopeSlider.value);
+            const intercept = parseFloat(interceptSlider.value);
+            const linePoints = parseInt(linePointsSlider.value);
+            
+            const xMin = parseFloat(xMinSlider.value);
+            const xMax = parseFloat(xMaxSlider.value);
+            
+            // Generate data points
+            const sineData = [];
+            const lineData = [];
+            const xSineValues = [];
+            const xLineValues = [];
+            
+            for (let i = 0; i < sinePoints; i++) {
+                const x = xMin + (xMax - xMin) * i / (sinePoints - 1);
+                const y = amplitude * Math.sin(2 * Math.PI * x / wavelength);
+                sineData.push(y);
+                xSineValues.push(x);
+            }
+            
+            for (let i = 0; i < linePoints; i++) {
+                const x = xMin + (xMax - xMin) * i / (linePoints - 1);
+                const y = slope * x + intercept;
+                lineData.push(y);
+                xLineValues.push(x);
+            }
+            
+            // Calculate statistics
+            const sineVariance = calculateVariance(sineData);
+            const sineStdDev = calculateStandardDeviation(sineData);
+            const sineMean = calculateMean(sineData);
+            const sineMax = calculateMax(sineData);
+            const sineMin = calculateMin(sineData);
+            
+            const lineVariance = calculateVariance(lineData);
+            const lineStdDev = calculateStandardDeviation(lineData);
+            const lineMean = calculateMean(lineData);
+            const lineMax = calculateMax(lineData);
+            const lineMin = calculateMin(lineData);
+            
+            // Update table
+            sineResultRow.cells[1].textContent = sineVariance.toFixed(4);
+            sineResultRow.cells[2].textContent = sineStdDev.toFixed(4);
+            sineResultRow.cells[3].textContent = sineMean.toFixed(4);
+            sineResultRow.cells[4].textContent = sineMax.toFixed(4);
+            sineResultRow.cells[5].textContent = sineMin.toFixed(4);
+            
+            lineResultRow.cells[1].textContent = lineVariance.toFixed(4);
+            lineResultRow.cells[2].textContent = lineStdDev.toFixed(4);
+            lineResultRow.cells[3].textContent = lineMean.toFixed(4);
+            lineResultRow.cells[4].textContent = lineMax.toFixed(4);
+            lineResultRow.cells[5].textContent = lineMin.toFixed(4);
+            
+            // Record variance history
+            varianceHistory.sine.push({
+                amplitude,
+                wavelength,
+                variance: sineVariance
+            });
+            
+            varianceHistory.line.push({
+                slope,
+                intercept,
+                variance: lineVariance
+            });
+            
+            // If history is too long, remove early records
+            if (varianceHistory.sine.length > 20) {
+                varianceHistory.sine.shift();
+            }
+            if (varianceHistory.line.length > 20) {
+                varianceHistory.line.shift();
+            }
+            
+            // Draw function chart
+            if (functionChart) {
+                functionChart.destroy();
+            }
+            
+            const functionCtx = functionCanvas.getContext('2d');
+            functionChart = new Chart(functionCtx, {
+                type: 'line',
+                data: {
+                    datasets: [
+                        {
+                            label: `Sine Function (A=${amplitude}, λ=${wavelength})`,
+                            data: xSineValues.map((x, i) => ({ x, y: sineData[i] })),
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            borderWidth: 2,
+                            pointRadius: 0
+                        },
+                        {
+                            label: `Line (k=${slope}, b=${intercept})`,
+                            data: xLineValues.map((x, i) => ({ x, y: lineData[i] })),
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            borderWidth: 2,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            position: 'bottom',
+                            title: {
+                                display: true,
+                                text: 'x'
+                            },
+                            min: xMin,
+                            max: xMax
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'y'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Make chart height more appropriate
+            functionCanvas.height = 180;
+            
+            // Draw variance chart
+            if (varianceChart) {
+                varianceChart.destroy();
+            }
+            
+            const varianceCtx = varianceCanvas.getContext('2d');
+            
+            // Extract the last 10 variance records for plotting
+            const sineVarianceData = varianceHistory.sine.slice(-10);
+            const lineVarianceData = varianceHistory.line.slice(-10);
+            
+            varianceChart = new Chart(varianceCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Sine Function', 'Line'],
+                    datasets: [
+                        {
+                            label: 'Variance',
+                            data: [sineVariance, lineVariance],
+                            backgroundColor: [
+                                'rgba(75, 192, 192, 0.6)',
+                                'rgba(255, 99, 132, 0.6)'
+                            ],
+                            borderColor: [
+                                'rgba(75, 192, 192, 1)',
+                                'rgba(255, 99, 132, 1)'
+                            ],
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Variance'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Make chart height more appropriate
+            varianceCanvas.height = 180;
+            
+            // Calculate theoretical values and wavelength effects
+            const theoreticalSineVariance = Math.pow(amplitude, 2) / 2;
+            const intervalLength = xMax - xMin;
+            const cyclesInInterval = intervalLength / wavelength;
+            const isFullCycle = Math.abs(cyclesInInterval - Math.round(cyclesInInterval)) < 0.01;
+            const theoreticalLineVariance = Math.pow(slope, 2) * Math.pow(intervalLength, 2) / 12;
+            
+            // Update sine function conclusions
+            const sineConclusions = document.getElementById('sineConclusions');
+            sineConclusions.innerHTML = `
+                <li>With amplitude A = ${amplitude}, theoretical variance over a complete cycle = A²/2 = ${theoreticalSineVariance.toFixed(4)}, actual calculated value = ${sineVariance.toFixed(4)}</li>
+                <li>Wavelength λ = ${wavelength}, interval [${xMin}, ${xMax}] contains approximately ${cyclesInInterval.toFixed(2)} cycles</li>
+                <li>Wavelength significantly affects variance: ${isFullCycle ? 'Current interval is close to an integer number of cycles, variance is close to theoretical value' : 'Current interval contains a non-integer number of cycles, variance deviates from theoretical value'}</li>
+                <li>Changes in wavelength alter the number of cycles in the interval, affecting the sampling distribution and the calculated variance</li>
+            `;
+            
+            // Update line conclusions
+            const lineConclusions = document.getElementById('lineConclusions');
+            lineConclusions.innerHTML = `
+                <li>With slope k = ${slope}, theoretical variance ≈ k²(xMax-xMin)²/12 = ${theoreticalLineVariance.toFixed(4)}, actual calculated value = ${lineVariance.toFixed(4)}</li>
+                <li>When the slope increases, variance increases with the square of the slope</li>
+                <li>Intercept b = ${intercept} does not affect variance, only changes the mean</li>
+                <li>The width of the sampling interval [${xMin}, ${xMax}] affects the magnitude of variance</li>
+            `;
+        }
+        
+        // Load Chart.js library on page load
+        function loadChartJS() {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js';
+            script.onload = () => {
+                calculateAndDraw();
+            };
+            document.head.appendChild(script);
+        }
+        
+        // Load chart library
+        loadChartJS();
+    </script>
+</body>
+</html>
